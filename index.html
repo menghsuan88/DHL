@@ -29,14 +29,22 @@
             color: white;
             transition: all 0.3s ease;
         }
-        .btn-dhl:hover {
+        .btn-dhl:not(:disabled):hover {
             background-color: var(--dhl-dark-red);
             transform: translateY(-2px);
         }
+        .btn-dhl:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
 
-        .option-btn:hover {
+        .option-btn {
+            transition: all 0.2s ease;
+        }
+        .option-btn.selected {
             border-color: var(--dhl-red);
             background-color: rgba(212, 5, 17, 0.05);
+            box-shadow: 0 0 0 2px var(--dhl-red);
         }
 
         #progress-bar {
@@ -109,7 +117,12 @@
                 <span id="score-display" class="bg-red-100 dhl-red-text px-3 py-1 rounded-full text-xs font-bold">SCORE: 0</span>
             </div>
             <h2 id="question-text" class="text-2xl font-bold text-gray-800 mb-8 leading-tight">載入中...</h2>
-            <div id="options-container" class="space-y-4"></div>
+            
+            <div id="options-container" class="space-y-4 mb-8"></div>
+
+            <button id="confirm-answer-btn" onclick="confirmAnswer()" disabled class="w-full btn-dhl font-bold py-4 rounded-xl shadow-lg text-lg">
+                確認答案
+            </button>
         </div>
         <div id="feedback" class="hidden p-4 text-center font-bold text-white transition-all"></div>
     </div>
@@ -148,6 +161,7 @@
 
         let currentQuestion = 0, score = 0, canAnswer = true;
         let userData = { id: "", name: "" };
+        let selectedOptionIndex = null;
 
         function showWarning(msg) {
             alert(msg);
@@ -159,13 +173,11 @@
             const id = idInput.value.trim();
             const name = nameInput.value.trim();
 
-            // 1. 基本空白檢查
             if (!id || !name) { 
                 showWarning("請填寫員工編號與姓名！"); 
                 return; 
             }
 
-            // 2. 格式檢查：純數字
             const numberRegex = /^\d+$/;
             if (!numberRegex.test(id)) {
                 showWarning("員工編號格式不正確，請輸入「純數字」。");
@@ -173,7 +185,6 @@
                 return;
             }
 
-            // 3. 長度檢查：必須是 5, 6, 或 9 碼
             const validLengths = [5, 6, 9];
             if (!validLengths.includes(id.length)) {
                 showWarning(`員工編號長度不符（您輸入了 ${id.length} 位數）。\n請輸入正確的 5、6 或 9 碼編號。`);
@@ -189,34 +200,67 @@
 
         function showQuestion() {
             canAnswer = true;
+            selectedOptionIndex = null;
             const q = quizData[currentQuestion];
+            
             document.getElementById('question-number').innerText = `Q ${currentQuestion + 1} / ${quizData.length}`;
             document.getElementById('question-text').innerText = q.question;
             document.getElementById('progress-bar').style.width = `${(currentQuestion / quizData.length) * 100}%`;
             document.getElementById('feedback').classList.add('hidden');
+            document.getElementById('confirm-answer-btn').disabled = true;
             
             const container = document.getElementById('options-container');
             container.innerHTML = '';
+            
             q.options.forEach((opt, idx) => {
                 const btn = document.createElement('button');
                 btn.className = "option-btn w-full text-left p-4 border-2 border-gray-100 rounded-xl font-medium flex justify-between items-center group";
+                btn.id = `opt-${idx}`;
                 btn.innerHTML = `<span>${opt}</span><span class="opacity-0 group-hover:opacity-100 transition dhl-red-text">➜</span>`;
-                btn.onclick = () => selectOption(idx, btn);
+                btn.onclick = () => selectOption(idx);
                 container.appendChild(btn);
             });
         }
 
-        function selectOption(idx, btn) {
+        function selectOption(idx) {
             if (!canAnswer) return;
+            
+            // 取消之前選中的按鈕樣式
+            if (selectedOptionIndex !== null) {
+                document.getElementById(`opt-${selectedOptionIndex}`).classList.remove('selected');
+            }
+            
+            // 設定新選中的按鈕樣式
+            selectedOptionIndex = idx;
+            document.getElementById(`opt-${idx}`).classList.add('selected');
+            
+            // 啟用確認按鈕
+            document.getElementById('confirm-answer-btn').disabled = false;
+        }
+
+        function confirmAnswer() {
+            if (selectedOptionIndex === null || !canAnswer) return;
+            
             canAnswer = false;
             const q = quizData[currentQuestion];
+            const confirmBtn = document.getElementById('confirm-answer-btn');
+            const selectedBtn = document.getElementById(`opt-${selectedOptionIndex}`);
             
-            if (idx === q.correct) {
+            confirmBtn.disabled = true;
+
+            if (selectedOptionIndex === q.correct) {
                 score += (100 / quizData.length);
-                btn.classList.add('border-green-500', 'bg-green-50');
+                selectedBtn.classList.remove('selected');
+                selectedBtn.classList.add('border-green-500', 'bg-green-50', 'ring-2', 'ring-green-500');
                 showFeedback("Correct!⭕", "bg-green-500");
             } else {
-                btn.classList.add('border-red-500', 'bg-red-50');
+                selectedBtn.classList.remove('selected');
+                selectedBtn.classList.add('border-red-500', 'bg-red-50', 'ring-2', 'ring-red-500');
+                
+                // 顯示正確答案
+                const correctBtn = document.getElementById(`opt-${q.correct}`);
+                correctBtn.classList.add('border-green-500', 'bg-green-50');
+                
                 showFeedback("Wrong!❌", "dhl-red-bg");
             }
 
@@ -226,7 +270,7 @@
                 currentQuestion++;
                 if (currentQuestion < quizData.length) showQuestion();
                 else showResult();
-            }, 800);
+            }, 1200);
         }
 
         function showFeedback(text, cls) {
