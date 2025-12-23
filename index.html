@@ -85,7 +85,7 @@
         <div class="space-y-6">
             <div>
                 <label class="block text-sm font-bold text-gray-700 mb-2">員工編號</label>
-                <input type="text" id="user-id" placeholder="請輸入完整5/6/9碼職編" class="w-full px-4 py-3 border-2 border-gray-100 rounded-xl focus:outline-none focus:border-[#D40511] transition text-gray-800">
+                <input type="text" id="user-id" placeholder="請輸入完整 5、6 或 9 碼職編" class="w-full px-4 py-3 border-2 border-gray-100 rounded-xl focus:outline-none focus:border-[#D40511] transition text-gray-800">
             </div>
             <div>
                 <label class="block text-sm font-bold text-gray-700 mb-2">中文姓名</label>
@@ -159,23 +159,26 @@
             const id = idInput.value.trim();
             const name = nameInput.value.trim();
 
+            // 1. 基本空白檢查
             if (!id || !name) { 
                 showWarning("請填寫員工編號與姓名！"); 
                 return; 
             }
 
+            // 2. 格式檢查：純數字
             const numberRegex = /^\d+$/;
             if (!numberRegex.test(id)) {
-                showWarning("員工編號格式不正確，請輸入純數字（例如：012345）。");
+                showWarning("員工編號格式不正確，請輸入「純數字」。");
                 idInput.focus();
                 return;
             }
 
-            if (id.length !== 5 && id.length !== 6 && id.length !== 9) {
-                if (!confirm("您輸入的職編長度非 5, 6 或 9 碼，是否確認正確？")) {
-                    idInput.focus();
-                    return;
-                }
+            // 3. 長度檢查：必須是 5, 6, 或 9 碼
+            const validLengths = [5, 6, 9];
+            if (!validLengths.includes(id.length)) {
+                showWarning(`員工編號長度不符（您輸入了 ${id.length} 位數）。\n請輸入正確的 5、6 或 9 碼編號。`);
+                idInput.focus();
+                return;
             }
 
             userData = { id: id, name: name };
@@ -291,26 +294,21 @@
             loader.classList.remove('hidden');
 
             try {
-                // 1. 取得當前時間
                 const timestamp = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
-                
-                // 2. 處理職編 (加上單引號保留首位0)
                 const finalId = "'" + userData.id;
 
-                // 3. 嚴格定義欄位順序：[時間, 職編, 姓名, 分數]
-                // 傳送一個陣列而不是物件，這能確保 GAS 接收時順序固定
                 const rowData = [
-                    timestamp,      // A 欄：時間
-                    finalId,        // B 欄：職編
-                    userData.name,  // C 欄：姓名
-                    finalScoreVal   // D 欄：分數
+                    timestamp,
+                    finalId,
+                    userData.name,
+                    finalScoreVal
                 ];
 
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ values: rowData }) // 以 values 為 key 包裹陣列
+                    body: JSON.stringify({ values: rowData })
                 });
 
                 setTimeout(() => {
