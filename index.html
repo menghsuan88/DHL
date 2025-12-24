@@ -103,7 +103,7 @@
                 開始挑戰 GO！
             </button>
             <p class="text-[10px] text-black-400 text-center uppercase tracking-widest">Internal Use Only</p>
-            <p class="text-[10px] text-black-400 text-center uppercase tracking-widest">本測驗收集之個人資訊僅限於抽獎使用，不供其他用途，填答則視同同意將提供之資訊用於內部抽獎，收集之資訊將於活動結束後60天內刪除，謝謝！😊</p>
+            <p class="text-[10px] text-gray-400 text-center leading-relaxed">本測驗收集之個人資訊僅限於抽獎使用，不供其他用途，填答則視同同意將提供之資訊用於內部抽獎，收集之資訊將於活動結束後60天內刪除，謝謝！😊</p>
         </div>
     </div>
 
@@ -121,9 +121,15 @@
             
             <div id="options-container" class="space-y-4 mb-8"></div>
 
-            <button id="confirm-answer-btn" onclick="confirmAnswer()" disabled class="w-full btn-dhl font-bold py-4 rounded-xl shadow-lg text-lg">
-                確認答案
-            </button>
+            <!-- 控制按鈕容器 -->
+            <div id="action-container">
+                <button id="confirm-answer-btn" onclick="confirmAnswer()" disabled class="w-full btn-dhl font-bold py-4 rounded-xl shadow-lg text-lg">
+                    確認答案
+                </button>
+                <button id="next-question-btn" onclick="nextQuestion()" class="hidden w-full bg-gray-800 hover:bg-black text-white font-bold py-4 rounded-xl shadow-lg text-lg animate__animated animate__pulse animate__infinite">
+                    下一題 ➜
+                </button>
+            </div>
         </div>
         <div id="feedback" class="hidden p-4 text-center font-bold text-white transition-all"></div>
     </div>
@@ -208,7 +214,11 @@
             document.getElementById('question-text').innerText = q.question;
             document.getElementById('progress-bar').style.width = `${(currentQuestion / quizData.length) * 100}%`;
             document.getElementById('feedback').classList.add('hidden');
+            
+            // 重置按鈕狀態
+            document.getElementById('confirm-answer-btn').classList.remove('hidden');
             document.getElementById('confirm-answer-btn').disabled = true;
+            document.getElementById('next-question-btn').classList.add('hidden');
             
             const container = document.getElementById('options-container');
             container.innerHTML = '';
@@ -226,16 +236,12 @@
         function selectOption(idx) {
             if (!canAnswer) return;
             
-            // 取消之前選中的按鈕樣式
             if (selectedOptionIndex !== null) {
                 document.getElementById(`opt-${selectedOptionIndex}`).classList.remove('selected');
             }
             
-            // 設定新選中的按鈕樣式
             selectedOptionIndex = idx;
             document.getElementById(`opt-${idx}`).classList.add('selected');
-            
-            // 啟用確認按鈕
             document.getElementById('confirm-answer-btn').disabled = false;
         }
 
@@ -245,15 +251,25 @@
             canAnswer = false;
             const q = quizData[currentQuestion];
             const confirmBtn = document.getElementById('confirm-answer-btn');
+            const nextBtn = document.getElementById('next-question-btn');
             const selectedBtn = document.getElementById(`opt-${selectedOptionIndex}`);
             
-            confirmBtn.disabled = true;
+            // 隱藏確認按鈕，顯示下一題按鈕
+            confirmBtn.classList.add('hidden');
+            nextBtn.classList.remove('hidden');
+            
+            // 判斷是否為最後一題，修改按鈕文字
+            if (currentQuestion === quizData.length - 1) {
+                nextBtn.innerText = "查看測驗結果 🏁";
+            } else {
+                nextBtn.innerText = "下一題 ➜";
+            }
 
             if (selectedOptionIndex === q.correct) {
                 score += (100 / quizData.length);
                 selectedBtn.classList.remove('selected');
                 selectedBtn.classList.add('border-green-500', 'bg-green-50', 'ring-2', 'ring-green-500');
-                showFeedback("Correct!⭕", "bg-green-500");
+                showFeedback("答對了！⭕", "bg-green-500");
             } else {
                 selectedBtn.classList.remove('selected');
                 selectedBtn.classList.add('border-red-500', 'bg-red-50', 'ring-2', 'ring-red-500');
@@ -262,16 +278,19 @@
                 const correctBtn = document.getElementById(`opt-${q.correct}`);
                 correctBtn.classList.add('border-green-500', 'bg-green-50');
                 
-                showFeedback("Wrong!❌", "dhl-red-bg");
+                showFeedback("答錯了！❌", "dhl-red-bg");
             }
 
             document.getElementById('score-display').innerText = `SCORE: ${Math.round(score)}`;
-            
-            setTimeout(() => {
-                currentQuestion++;
-                if (currentQuestion < quizData.length) showQuestion();
-                else showResult();
-            }, 1200);
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            if (currentQuestion < quizData.length) {
+                showQuestion();
+            } else {
+                showResult();
+            }
         }
 
         function showFeedback(text, cls) {
@@ -388,7 +407,7 @@
         }
     </script>
 </body>
-
 </html>
+
 
 
